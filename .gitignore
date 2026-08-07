@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.benchmarks/
+results/raw/*.json
+results/runs.csv
+results/summary/*.csv
+results/summary/*.md
+results/summary/*.tex
+results/figures/*.png
+results/figures/*.pdf
+*.egg-info/
+

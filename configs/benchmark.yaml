@@ -1,0 +1,7 @@
+quixbugs:
+  repo_url: "https://github.com/jkoppel/QuixBugs.git"
+  commit_sha: "4257f44b0ff1181dedaedee6a447e133219fcebf"
+  local_path: ".benchmarks/QuixBugs"
+  python_programs_dir: "python_programs"
+  python_tests_dir: "python_testcases"
+  timeout_seconds: 10
