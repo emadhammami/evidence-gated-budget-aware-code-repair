@@ -42,6 +42,11 @@ class LLMCallRecord(BaseModel):
     thinking_config_note: str | None = None
     usage: TokenUsage = Field(default_factory=TokenUsage)
     runtime_seconds: float = 0.0
+    provider_attempts: int = 0
+    transient_retries: int = 0
+    rate_limit_retries: int = 0
+    rate_limit_wait_seconds: float = 0.0
+    provider_wall_time_seconds: float = 0.0
     raw_output: str = ""
     skipped_reason: str | None = None
 
@@ -112,6 +117,12 @@ class RepairState(BaseModel):
     early_exit: bool = False
     budget_exhausted: bool = False
     budget_violation: bool = False
+    provider_attempts: int = 0
+    transient_retries: int = 0
+    rate_limit_retries: int = 0
+    rate_limit_wait_seconds: float = 0.0
+    provider_wall_time_seconds: float = 0.0
+    infrastructure_error: str | None = None
     final_error_category: ErrorCategory = "none"
 
     @property

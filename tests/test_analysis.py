@@ -61,3 +61,46 @@ def test_csv_boolean_normalization_preserves_false_values(tmp_path):
     assert result["early_exit_rate_pct"] == 50
     assert result["budget_exhaustion_rate_pct"] == 50
     assert result["budget_violation_rate_pct"] == 0
+
+
+def test_analysis_excludes_infrastructure_errors_by_default(tmp_path):
+    path = tmp_path / "runs.csv"
+    pd.DataFrame(
+        [
+            {
+                "method": "single_shot",
+                "token_budget": 8000,
+                "workflow_success": "True",
+                "candidate_correct": "True",
+                "total_tokens": 100,
+                "critic_accepted": "",
+                "false_accept": "",
+                "llm_calls": 1,
+                "early_exit": "False",
+                "budget_exhausted": "False",
+                "budget_violation": "False",
+                "runtime_seconds": 1,
+                "is_pilot": "False",
+                "run_status": "completed",
+            },
+            {
+                "method": "single_shot",
+                "token_budget": 8000,
+                "workflow_success": "False",
+                "candidate_correct": "False",
+                "total_tokens": 0,
+                "critic_accepted": "",
+                "false_accept": "",
+                "llm_calls": 0,
+                "early_exit": "False",
+                "budget_exhausted": "False",
+                "budget_violation": "False",
+                "runtime_seconds": 0,
+                "is_pilot": "False",
+                "run_status": "infrastructure_error",
+            },
+        ]
+    ).to_csv(path, index=False)
+    loaded = load_runs(path)
+    assert len(loaded) == 1
+    assert loaded.iloc[0]["run_status"] == "completed"

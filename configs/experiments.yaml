@@ -5,6 +5,10 @@ model:
   thinking_budget: 0
   min_output_tokens: 32
 
+provider:
+  requests_per_minute: 4
+  max_transient_retries: 6
+
 budgets:
   required: [2000, 4000, 8000]
   main_comparison_budget: 8000

@@ -2,6 +2,7 @@
 .venv/
 __pycache__/
 .pytest_cache/
+.pytest_tmp/
 .ruff_cache/
 .benchmarks/
 results/raw/*.json
@@ -12,4 +13,3 @@ results/summary/*.tex
 results/figures/*.png
 results/figures/*.pdf
 *.egg-info/
-

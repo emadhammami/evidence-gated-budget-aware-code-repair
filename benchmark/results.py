@@ -37,6 +37,11 @@ CSV_FIELDS = [
     "total_tokens",
     "token_count_estimated",
     "llm_calls",
+    "provider_attempts",
+    "transient_retries",
+    "rate_limit_retries",
+    "rate_limit_wait_seconds",
+    "provider_wall_time_seconds",
     "planner_calls",
     "executor_attempts",
     "critic_calls",
@@ -55,6 +60,7 @@ CSV_FIELDS = [
     "runtime_seconds",
     "llm_runtime_seconds",
     "validation_runtime_seconds",
+    "infrastructure_error",
 ]
 
 
@@ -128,6 +134,13 @@ def state_to_row(
         "total_tokens": usage.total_tokens,
         "token_count_estimated": usage.token_count_estimated,
         "llm_calls": len([c for c in state.llm_calls if c.admitted]),
+        "provider_attempts": state.provider_attempts + sum(c.provider_attempts for c in state.llm_calls),
+        "transient_retries": state.transient_retries + sum(c.transient_retries for c in state.llm_calls),
+        "rate_limit_retries": state.rate_limit_retries + sum(c.rate_limit_retries for c in state.llm_calls),
+        "rate_limit_wait_seconds": state.rate_limit_wait_seconds
+        + sum(c.rate_limit_wait_seconds for c in state.llm_calls),
+        "provider_wall_time_seconds": state.provider_wall_time_seconds
+        + sum(c.provider_wall_time_seconds for c in state.llm_calls),
         "planner_calls": len([c for c in state.llm_calls if c.role == "planner" and c.admitted]),
         "executor_attempts": len(state.executor_outputs),
         "critic_calls": len([c for c in state.llm_calls if c.role == "critic" and c.admitted]),
@@ -146,6 +159,7 @@ def state_to_row(
         "runtime_seconds": runtime,
         "llm_runtime_seconds": sum(c.runtime_seconds for c in state.llm_calls),
         "validation_runtime_seconds": sum(v.runtime_seconds for v in state.validations),
+        "infrastructure_error": state.infrastructure_error,
     }
 
 

@@ -27,6 +27,8 @@ class ExperimentConfig:
             provider=model.get("provider", "google"),
             thinking_budget=model.get("thinking_budget"),
             min_output_tokens=int(model.get("min_output_tokens", 32)),
+            requests_per_minute=int(self.raw.get("provider", {}).get("requests_per_minute", 4)),
+            max_transient_retries=int(self.raw.get("provider", {}).get("max_transient_retries", 6)),
         )
 
     @property

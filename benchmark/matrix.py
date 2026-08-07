@@ -20,6 +20,35 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def execute_plan(
+    plan,
+    *,
+    repetition: int,
+    is_pilot: bool,
+    force: bool,
+    benchmark: QuixBugsBenchmark,
+    config: ExperimentConfig,
+    completed_csv: str = "results/runs.csv",
+    run_one_fn=run_one,
+) -> None:
+    done = completed_keys(completed_csv)
+    for task, method, budget in plan:
+        key = (task, method, budget, repetition)
+        if key in done and not force:
+            print(f"skip completed {task} {method} {budget} run{repetition}")
+            continue
+        print(f"run {task} {method} {budget} run{repetition} pilot={is_pilot}")
+        run_one_fn(
+            task_id=task,
+            method=cast(MethodName, method),
+            budget=int(budget),
+            repetition=repetition,
+            is_pilot=is_pilot,
+            benchmark=benchmark,
+            experiment_config=config,
+        )
+
+
 def main() -> None:
     args = parse_args()
     benchmark = QuixBugsBenchmark()
@@ -35,22 +64,14 @@ def main() -> None:
         plan = [(task, method, main_budget) for task in tasks for method in methods]
         plan += [(task, "evidence_gated", budget) for task in tasks for budget in lower_budgets]
         is_pilot = False
-    done = completed_keys()
-    for task, method, budget in plan:
-        key = (task, method, budget, args.repetition)
-        if key in done and not args.force:
-            print(f"skip completed {task} {method} {budget} run{args.repetition}")
-            continue
-        print(f"run {task} {method} {budget} run{args.repetition} pilot={is_pilot}")
-        run_one(
-            task_id=task,
-            method=cast(MethodName, method),
-            budget=int(budget),
-            repetition=args.repetition,
-            is_pilot=is_pilot,
-            benchmark=benchmark,
-            experiment_config=config,
-        )
+    execute_plan(
+        plan,
+        repetition=args.repetition,
+        is_pilot=is_pilot,
+        force=args.force,
+        benchmark=benchmark,
+        config=config,
+    )
 
 
 if __name__ == "__main__":

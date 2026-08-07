@@ -27,6 +27,8 @@ def normalize_bool(series: pd.Series) -> pd.Series:
 
 def load_runs(path: str | Path = "results/runs.csv", include_pilot: bool = False) -> pd.DataFrame:
     df = pd.read_csv(path)
+    if "run_status" in df.columns:
+        df = df[df["run_status"].fillna("completed") == "completed"]
     if "is_pilot" in df.columns and not include_pilot:
         df = df[normalize_bool(df["is_pilot"]) != True]  # noqa: E712
     return df

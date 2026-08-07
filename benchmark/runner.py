@@ -4,8 +4,8 @@ import subprocess
 import uuid
 from pathlib import Path
 
-from agent.models import GeminiClient, LLMClient
-from agent.state import MethodName, RepairState
+from agent.models import GeminiClient, LLMClient, ProviderInfrastructureError
+from agent.state import MethodName, RepairState, utc_now_iso
 from agent.variants import run_evidence_gated, run_pec, run_pevc, run_single_shot
 from benchmark.config import ExperimentConfig
 from benchmark.quixbugs import QuixBugsBenchmark
@@ -40,6 +40,7 @@ def run_one(
     benchmark: QuixBugsBenchmark | None = None,
     experiment_config: ExperimentConfig | None = None,
     persist: bool = True,
+    results_root: str | Path = "results",
 ) -> RepairState:
     bench = benchmark or QuixBugsBenchmark()
     config = experiment_config or ExperimentConfig.load()
@@ -59,7 +60,19 @@ def run_one(
         critic_generation_budget=config.generation_budget("critic"),
     )
     client = llm or GeminiClient(model_config)
-    final_state = VARIANTS[method](state, client, bench)
+    try:
+        final_state = VARIANTS[method](state, client, bench)
+    except ProviderInfrastructureError as exc:
+        state.run_status = "infrastructure_error"
+        state.infrastructure_error = str(exc)
+        state.provider_attempts += exc.provider_attempts
+        state.transient_retries += exc.transient_retries
+        state.rate_limit_retries += exc.rate_limit_retries
+        state.rate_limit_wait_seconds += exc.rate_limit_wait_seconds
+        state.provider_wall_time_seconds += exc.provider_wall_time_seconds
+        state.ended_at_utc = utc_now_iso()
+        state.add_event("infrastructure_error", error=str(exc))
+        final_state = state
     if persist:
         persist_result(
             final_state,
@@ -67,6 +80,6 @@ def run_one(
             benchmark_commit=bench.benchmark_commit(),
             model=model_config.name,
             temperature=model_config.temperature,
-            results_root=Path("results"),
+            results_root=Path(results_root),
         )
     return final_state

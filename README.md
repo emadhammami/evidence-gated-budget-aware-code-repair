@@ -48,12 +48,26 @@ the remaining budget could not admit another LLM call. `budget_violation` means 
 measured provider token usage exceeded the configured per-task budget. A refused call due
 to insufficient remaining budget is not a budget violation.
 
-`configs/experiments.yaml` fixes `thinking_budget: 0` for every method. The current
-`google-generativeai` adapter used here does not expose a verified stable
-`thinking_config` field in this environment, so the client does not invent or send an
-unsupported parameter. The raw LLM call telemetry records this limitation; all methods use
-the same provider default thinking behavior unless the SDK adapter is updated to support
-`thinking_budget` cleanly.
+The Gemini adapter uses the current `google-genai` SDK:
+
+```python
+types.GenerateContentConfig(
+    temperature=0,
+    max_output_tokens=max_output_tokens,
+    thinking_config=types.ThinkingConfig(thinking_budget=0),
+)
+```
+
+The same thinking configuration is applied to Planner, Executor, retry, and Critic calls
+for every method. Raw call telemetry records `thinking_budget = 0` and
+`thinking_config_applied = true`.
+
+`configs/experiments.yaml` also configures provider pacing. The default is
+`requests_per_minute: 4`, intentionally below the observed 5-RPM free-tier limit. A
+process-wide generate-content rate limiter is shared by every role. Transient provider
+errors such as 429, 408, 500, 502, 503, and 504 are retried with bounded backoff. Retry and
+pacing telemetry is recorded separately as provider operations, not as scientific LLM
+calls, and deliberate wait time is excluded from `llm_runtime_seconds`.
 
 Required budgets are `2000`, `4000`, and `8000`. The main comparison is all four variants
 at `8000`; budget sensitivity is V3 at all three budgets.
@@ -138,18 +152,23 @@ Use `--force` to rerun an existing combination.
 `token_budget`, `repetition`, `model`, `temperature`, `is_pilot`, `run_status`,
 `candidate_correct`, `workflow_success`, `tests_passed`, `tests_failed`, `tests_total`,
 `critic_invoked`, `critic_accepted`, `false_accept`, `false_reject`, `input_tokens`,
-`output_tokens`, `total_tokens`, `token_count_estimated`, `llm_calls`, `planner_calls`,
+`output_tokens`, `total_tokens`, `token_count_estimated`, `llm_calls`,
+`provider_attempts`, `transient_retries`, `rate_limit_retries`,
+`rate_limit_wait_seconds`, `provider_wall_time_seconds`, `planner_calls`,
 `executor_attempts`, `critic_calls`, `validation_attempts`, `validation_failures`,
 `retry_used`, `early_exit`, `budget_exhausted`, `budget_violation`, `budget_limit`,
 `budget_used`, `budget_remaining`, `patch_applied`, `syntax_valid`, `final_error_category`,
-`runtime_seconds`, `llm_runtime_seconds`, `validation_runtime_seconds`.
+`runtime_seconds`, `llm_runtime_seconds`, `validation_runtime_seconds`,
+`infrastructure_error`.
 
 Raw JSON files preserve state, node-level telemetry, LLM call records, patch records, and
 runtime fingerprints for auditability. Full LLM outputs are kept out of `runs.csv`.
 
 Resume logic skips rows with `run_status = completed` unless `--force` is supplied. A
-completed budget-exhausted run is still a completed experimental outcome; only
-`infrastructure_error` rows are eligible for automatic retry.
+completed budget-exhausted run is still a completed experimental outcome. If transient
+provider retries are exhausted, the run is saved as `run_status = infrastructure_error`;
+analysis excludes that row from scientific aggregates by default, and resume will retry it
+later.
 
 ## Analysis
 
