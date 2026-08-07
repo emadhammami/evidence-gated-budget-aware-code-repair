@@ -33,7 +33,13 @@ class LLMCallRecord(BaseModel):
     role: str
     admitted: bool
     prompt_tokens_estimate: int
+    prompt_token_count_estimated: bool = False
+    configured_generation_budget: int | None = None
     generation_budget: int
+    max_output_tokens: int | None = None
+    thinking_budget: int | None = None
+    thinking_config_applied: bool = False
+    thinking_config_note: str | None = None
     usage: TokenUsage = Field(default_factory=TokenUsage)
     runtime_seconds: float = 0.0
     raw_output: str = ""

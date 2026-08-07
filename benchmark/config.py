@@ -25,6 +25,8 @@ class ExperimentConfig:
             name=model["name"],
             temperature=float(model["temperature"]),
             provider=model.get("provider", "google"),
+            thinking_budget=model.get("thinking_budget"),
+            min_output_tokens=int(model.get("min_output_tokens", 32)),
         )
 
     @property
@@ -52,4 +54,3 @@ class ExperimentConfig:
 
     def generation_budget(self, role: str) -> int:
         return int(self.raw["generation_budgets"][role])
-

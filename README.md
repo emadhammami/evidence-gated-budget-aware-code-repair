@@ -34,16 +34,26 @@ All variants use the centralized model configuration in `configs/experiments.yam
 - API key: `GOOGLE_API_KEY`
 
 The code performs pre-call budget admission control before every LLM invocation. A call is
-not intentionally started unless the estimated prompt tokens plus allowed generation budget
-fit inside the remaining per-task budget. Gemini calls also pass the admitted generation
-budget as `max_output_tokens`, so provider-side output caps are enforced when supported by
-the API.
+not intentionally started unless the prompt tokens plus allowed generation budget fit inside
+the remaining per-task budget. For real Gemini calls, the client first calls the model's
+`count_tokens(prompt)` capability. It then computes `available_output = remaining -
+actual_prompt_tokens` and passes `max_output_tokens = min(configured_generation_budget,
+available_output)` to Gemini. If the remaining output allowance is below the configured
+minimum meaningful call size, the workflow stops with `budget_exhausted = true` before
+calling the model.
 
 Provider usage metadata is recorded when available; otherwise token counts are explicitly
 marked as estimated. `budget_exhausted` means the workflow intentionally stopped because
 the remaining budget could not admit another LLM call. `budget_violation` means actual
 measured provider token usage exceeded the configured per-task budget. A refused call due
 to insufficient remaining budget is not a budget violation.
+
+`configs/experiments.yaml` fixes `thinking_budget: 0` for every method. The current
+`google-generativeai` adapter used here does not expose a verified stable
+`thinking_config` field in this environment, so the client does not invent or send an
+unsupported parameter. The raw LLM call telemetry records this limitation; all methods use
+the same provider default thinking behavior unless the SDK adapter is updated to support
+`thinking_budget` cleanly.
 
 Required budgets are `2000`, `4000`, and `8000`. The main comparison is all four variants
 at `8000`; budget sensitivity is V3 at all three budgets.

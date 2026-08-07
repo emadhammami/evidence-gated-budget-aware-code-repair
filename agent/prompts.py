@@ -7,7 +7,8 @@ def planner_prompt(task_id: str, code: str) -> str:
     return f"""You are the Planner for a controlled code-repair experiment.
 Task: {task_id}
 Given only the buggy implementation below, identify the likely defective function and a concise bug hypothesis.
-Do not use hidden tests or known QuixBugs solutions.
+Base your analysis only on the provided source code.
+Do not rely on external tests, external solutions, or memorized benchmark answers.
 
 ```python
 {code}
@@ -25,8 +26,9 @@ Task: {task_id}
 Remaining token budget: {remaining_budget}
 Hypothesis: {hypothesis}
 
-Produce one corrected minimal Python function body or full function replacing the buggy function.
-Return only Python code, no markdown fences.
+Return exactly one complete corrected Python function definition.
+Preserve the target function name and a compatible signature.
+Return Python code only, without markdown fences or explanation.
 
 ```python
 {code}
@@ -62,7 +64,9 @@ Prior proposed patch:
 {prior_patch}
 ```
 
-Produce a corrected minimal patch as Python code only.
+Return exactly one complete corrected Python function definition.
+Preserve the target function name and a compatible signature.
+Return Python code only, without markdown fences or explanation.
 """
 
 
@@ -105,4 +109,3 @@ Proposed patch:
 
 Return ACCEPT or REJECT on the first line, followed by a short rationale.
 """
-

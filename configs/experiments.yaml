@@ -2,6 +2,8 @@ model:
   provider: "google"
   name: "gemini-2.5-flash"
   temperature: 0
+  thinking_budget: 0
+  min_output_tokens: 32
 
 budgets:
   required: [2000, 4000, 8000]
