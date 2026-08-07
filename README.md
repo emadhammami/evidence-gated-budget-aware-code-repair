@@ -69,8 +69,8 @@ errors such as 429, 408, 500, 502, 503, and 504 are retried with bounded backoff
 pacing telemetry is recorded separately as provider operations, not as scientific LLM
 calls, and deliberate wait time is excluded from `llm_runtime_seconds`.
 
-Required budgets are `2000`, `4000`, and `8000`. The main comparison is all four variants
-at `8000`; budget sensitivity is V3 at all three budgets.
+Required budgets are `1000`, `2000`, and `4000`. The main comparison is all four variants
+at `4000`; budget sensitivity is V3 at all three budgets.
 
 ## QuixBugs Validation
 
@@ -117,7 +117,7 @@ Set `GOOGLE_API_KEY` in the environment before real Gemini runs. Do not commit `
 Run selected tasks:
 
 ```bash
-python -m benchmark.run --method evidence_gated --budget 8000 --tasks gcd,quicksort
+python -m benchmark.run --method evidence_gated --budget 4000 --tasks gcd,quicksort
 ```
 
 Run the 5-task infrastructure pilot:
@@ -132,8 +132,8 @@ Run the core matrix after the protocol is verified:
 python -m benchmark.matrix --core
 ```
 
-The core matrix is at most 240 individual runs: 40 tasks x 4 methods at 8000, plus
-40 tasks x V3 at 4000 and 40 tasks x V3 at 2000. Pilot data is marked with
+The core matrix is at most 240 individual runs: 40 tasks x 4 methods at 4000, plus
+40 tasks x V3 at 2000 and 40 tasks x V3 at 1000. Pilot data is marked with
 `is_pilot = true` and is excluded from aggregate statistics by default.
 
 ## Resume Semantics

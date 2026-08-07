@@ -10,8 +10,8 @@ provider:
   max_transient_retries: 6
 
 budgets:
-  required: [2000, 4000, 8000]
-  main_comparison_budget: 8000
+  required: [1000, 2000, 4000]
+  main_comparison_budget: 4000
 
 attempt_policy:
   single_shot:
