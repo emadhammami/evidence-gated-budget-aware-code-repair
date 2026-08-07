@@ -4,6 +4,7 @@ import argparse
 from typing import cast
 
 from agent.state import MethodName
+from benchmark.config import ExperimentConfig
 from benchmark.quixbugs import QuixBugsBenchmark
 from benchmark.results import completed_keys
 from benchmark.runner import run_one
@@ -23,6 +24,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     benchmark = QuixBugsBenchmark()
+    config = ExperimentConfig.load()
     tasks = benchmark.discover_tasks() if args.tasks == "all" else [t.strip() for t in args.tasks.split(",")]
     done = completed_keys()
     for task in tasks:
@@ -38,9 +40,9 @@ def main() -> None:
             repetition=args.repetition,
             is_pilot=args.pilot,
             benchmark=benchmark,
+            experiment_config=config,
         )
 
 
 if __name__ == "__main__":
     main()
-

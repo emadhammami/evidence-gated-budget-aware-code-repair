@@ -12,7 +12,7 @@ def run_single_shot(state: RepairState, llm: LLMClient, benchmark: QuixBugsBench
     budget = BudgetManager(state.token_budget)
     # No planner and no critic by protocol; executor sees the full buggy code once.
     state.planner = None
-    run_executor(state, llm, budget)
+    run_executor(state, llm, budget, generation_budget=state.executor_generation_budget)
     if not state.early_exit:
         validate_candidate(state, benchmark)
     state.ended_at_utc = state.ended_at_utc or utc_now_iso()

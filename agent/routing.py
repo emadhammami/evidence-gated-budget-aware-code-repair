@@ -12,5 +12,8 @@ def evidence_gate_should_retry(state: RepairState, max_executor_attempts: int = 
     validation = state.latest_validation
     if validation is None or validation.success:
         return False
-    return len(state.executor_outputs) < max_executor_attempts and not state.budget_exceeded
-
+    return (
+        len(state.executor_outputs) < max_executor_attempts
+        and not state.budget_exhausted
+        and not state.budget_violation
+    )

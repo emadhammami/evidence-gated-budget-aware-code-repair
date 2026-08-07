@@ -20,6 +20,7 @@ def run_executor(
     llm: LLMClient,
     budget: BudgetManager,
     prior_evidence: ValidationResult | None = None,
+    generation_budget: int = 768,
 ) -> None:
     hypothesis = state.planner.hypothesis if state.planner else "Unknown defect."
     if prior_evidence is None:
@@ -34,13 +35,13 @@ def run_executor(
             hypothesis,
             budget.remaining,
         )
-    call = llm.generate("executor", prompt, budget, generation_budget=768)
+    call = llm.generate("executor", prompt, budget, generation_budget=generation_budget)
     state.llm_calls.append(call)
     if not call.admitted:
         state.early_exit = True
-        state.budget_exceeded = True
+        state.budget_exhausted = True
         state.add_event("executor", admitted=False)
         return
+    state.budget_violation = state.budget_violation or budget.violated
     state.executor_outputs.append(ExecutorOutput(proposed_code=clean_code(call.raw_output)))
     state.add_event("executor", admitted=True, attempt=len(state.executor_outputs))
-

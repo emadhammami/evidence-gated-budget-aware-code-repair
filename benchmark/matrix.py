@@ -3,9 +3,8 @@ from __future__ import annotations
 import argparse
 from typing import cast
 
-import yaml
-
 from agent.state import MethodName
+from benchmark.config import ExperimentConfig
 from benchmark.quixbugs import QuixBugsBenchmark
 from benchmark.results import completed_keys
 from benchmark.runner import run_one
@@ -24,14 +23,17 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     benchmark = QuixBugsBenchmark()
-    config = yaml.safe_load(open("configs/experiments.yaml", encoding="utf-8"))
+    config = ExperimentConfig.load()
     if args.pilot:
-        plan = [(task, config["pilot"]["method"], config["pilot"]["budget"]) for task in config["pilot"]["tasks"]]
+        plan = [(task, config.pilot_method, config.pilot_budget) for task in config.pilot_tasks]
         is_pilot = True
     else:
         tasks = benchmark.discover_tasks()
-        plan = [(task, method, 8000) for task in tasks for method in ["single_shot", "pec", "pevc", "evidence_gated"]]
-        plan += [(task, "evidence_gated", budget) for task in tasks for budget in [4000, 2000]]
+        main_budget = config.main_comparison_budget
+        lower_budgets = [budget for budget in config.required_budgets if budget != main_budget]
+        methods = ["single_shot", "pec", "pevc", "evidence_gated"]
+        plan = [(task, method, main_budget) for task in tasks for method in methods]
+        plan += [(task, "evidence_gated", budget) for task in tasks for budget in lower_budgets]
         is_pilot = False
     done = completed_keys()
     for task, method, budget in plan:
@@ -47,9 +49,9 @@ def main() -> None:
             repetition=args.repetition,
             is_pilot=is_pilot,
             benchmark=benchmark,
+            experiment_config=config,
         )
 
 
 if __name__ == "__main__":
     main()
-

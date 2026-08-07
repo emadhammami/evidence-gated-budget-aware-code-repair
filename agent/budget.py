@@ -56,3 +56,7 @@ class BudgetManager:
         self.used.total_tokens += usage.total_tokens
         self.used.token_count_estimated = self.used.token_count_estimated or usage.token_count_estimated
 
+    @property
+    def violated(self) -> bool:
+        return self.used.total_tokens > self.total_budget
+

@@ -35,8 +35,15 @@ All variants use the centralized model configuration in `configs/experiments.yam
 
 The code performs pre-call budget admission control before every LLM invocation. A call is
 not intentionally started unless the estimated prompt tokens plus allowed generation budget
-fit inside the remaining per-task budget. Provider usage metadata is recorded when
-available; otherwise token counts are explicitly marked as estimated.
+fit inside the remaining per-task budget. Gemini calls also pass the admitted generation
+budget as `max_output_tokens`, so provider-side output caps are enforced when supported by
+the API.
+
+Provider usage metadata is recorded when available; otherwise token counts are explicitly
+marked as estimated. `budget_exhausted` means the workflow intentionally stopped because
+the remaining budget could not admit another LLM call. `budget_violation` means actual
+measured provider token usage exceeded the configured per-task budget. A refused call due
+to insufficient remaining budget is not a budget violation.
 
 Required budgets are `2000`, `4000`, and `8000`. The main comparison is all four variants
 at `8000`; budget sensitivity is V3 at all three budgets.
@@ -44,7 +51,9 @@ at `8000`; budget sensitivity is V3 at all three budgets.
 ## QuixBugs Validation
 
 `python -m benchmark.setup` clones QuixBugs into `.benchmarks/QuixBugs/` and checks out the
-exact SHA in `configs/benchmark.yaml`.
+exact SHA in `configs/benchmark.yaml`. The benchmark task list is an explicit 40-task
+allowlist in that same config file. Task discovery never uses `*.py` glob inference and
+fails clearly if a configured source or `python_testcases/test_<task>.py` file is missing.
 
 Each individual run:
 
@@ -57,8 +66,14 @@ Each individual run:
 7. records JSON and CSV telemetry,
 8. discards the temporary copy.
 
-A repair is successful only when the relevant official tests pass. Merely executing a
-function definition with return code `0` is not counted as a repair.
+`candidate_correct` is true when the final candidate passes the relevant official
+QuixBugs tests. `workflow_success` is the main repair-rate metric: for `single_shot` it is
+equal to `candidate_correct`; for PEC, PEVC, and Evidence-Gated it requires both
+`candidate_correct` and `critic_accepted`. `false_accept` means the Critic accepted a
+candidate that failed the official tests. `false_reject` means the Critic rejected a
+candidate that passed those tests. Single-shot has null Critic-related metrics.
+
+Merely executing a function definition with return code `0` is not counted as a repair.
 
 ## Setup
 
@@ -110,21 +125,21 @@ Use `--force` to rerun an existing combination.
 `results/runs.csv` contains:
 
 `experiment_id`, `timestamp_utc`, `git_commit`, `benchmark_commit`, `task_id`, `method`,
-`token_budget`, `repetition`, `model`, `temperature`, `is_pilot`, `repaired`,
-`tests_passed`, `tests_failed`, `tests_total`, `critic_invoked`, `critic_accepted`,
-`false_accept`, `input_tokens`, `output_tokens`, `total_tokens`, `token_count_estimated`,
-`llm_calls`, `planner_calls`, `executor_attempts`, `critic_calls`, `validation_attempts`,
-`validation_failures`, `retry_used`, `early_exit`, `budget_exceeded`, `budget_limit`,
-`budget_used`, `budget_remaining`, `patch_applied`, `syntax_valid`,
-`final_error_category`, `runtime_seconds`, `llm_runtime_seconds`,
-`validation_runtime_seconds`.
+`token_budget`, `repetition`, `model`, `temperature`, `is_pilot`, `run_status`,
+`candidate_correct`, `workflow_success`, `tests_passed`, `tests_failed`, `tests_total`,
+`critic_invoked`, `critic_accepted`, `false_accept`, `false_reject`, `input_tokens`,
+`output_tokens`, `total_tokens`, `token_count_estimated`, `llm_calls`, `planner_calls`,
+`executor_attempts`, `critic_calls`, `validation_attempts`, `validation_failures`,
+`retry_used`, `early_exit`, `budget_exhausted`, `budget_violation`, `budget_limit`,
+`budget_used`, `budget_remaining`, `patch_applied`, `syntax_valid`, `final_error_category`,
+`runtime_seconds`, `llm_runtime_seconds`, `validation_runtime_seconds`.
 
 Raw JSON files preserve state, node-level telemetry, LLM call records, patch records, and
 runtime fingerprints for auditability. Full LLM outputs are kept out of `runs.csv`.
 
-For V1/V2/V3, `false_accept = true` when the Critic accepts a patch but the official tests
-fail. For `single_shot`, `critic_accepted` and `false_accept` are null because no Critic
-exists.
+Resume logic skips rows with `run_status = completed` unless `--force` is supplied. A
+completed budget-exhausted run is still a completed experimental outcome; only
+`infrastructure_error` rows are eligible for automatic retry.
 
 ## Analysis
 
@@ -176,4 +191,3 @@ function, it records `patch_error` instead of attempting risky text replacement.
 test path conventions may require updates if the upstream repository structure changes.
 Provider token metadata availability depends on the Gemini client response shape; estimated
 counts are marked explicitly.
-

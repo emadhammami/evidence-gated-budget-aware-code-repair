@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from analysis.aggregate import aggregate, load_runs
+from benchmark.config import ExperimentConfig
 
 METHOD_LABELS = {
     "single_shot": "Single-shot",
@@ -28,13 +29,16 @@ def main() -> None:
     args = parser.parse_args()
     out = Path(args.out)
     df = load_runs(args.runs, include_pilot=args.include_pilot)
+    config = ExperimentConfig.load()
+    main_budget = config.main_comparison_budget
 
-    table_a = aggregate(df[df["token_budget"] == 8000], ["method"])
+    table_a = aggregate(df[df["token_budget"] == main_budget], ["method"])
     table_a["Method"] = table_a["method"].map(METHOD_LABELS)
     table_a = table_a[
         [
             "Method",
             "repair_rate_pct",
+            "candidate_correct_rate_pct",
             "mean_tokens",
             "median_tokens",
             "repairs_per_100k_tokens",
@@ -44,6 +48,7 @@ def main() -> None:
     ].rename(
         columns={
             "repair_rate_pct": "Repair Rate (%)",
+            "candidate_correct_rate_pct": "Candidate Correct Rate (%)",
             "mean_tokens": "Mean Tokens",
             "median_tokens": "Median Tokens",
             "repairs_per_100k_tokens": "Repairs / 100K Tokens",
@@ -61,6 +66,7 @@ def main() -> None:
             "mean_tokens",
             "repairs_per_100k_tokens",
             "early_exit_rate_pct",
+            "budget_exhaustion_rate_pct",
             "budget_violation_rate_pct",
         ]
     ].rename(
@@ -70,6 +76,7 @@ def main() -> None:
             "mean_tokens": "Mean Tokens",
             "repairs_per_100k_tokens": "Repairs / 100K Tokens",
             "early_exit_rate_pct": "Early Exit Rate (%)",
+            "budget_exhaustion_rate_pct": "Budget Exhaustion Rate (%)",
             "budget_violation_rate_pct": "Budget Violation Rate (%)",
         }
     )
@@ -79,4 +86,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -12,13 +12,12 @@ from benchmark.quixbugs import QuixBugsBenchmark
 
 def run_pec(state: RepairState, llm: LLMClient, benchmark: QuixBugsBenchmark) -> RepairState:
     budget = BudgetManager(state.token_budget)
-    run_planner(state, llm, budget)
+    run_planner(state, llm, budget, generation_budget=state.planner_generation_budget)
     if not state.early_exit:
-        run_executor(state, llm, budget)
+        run_executor(state, llm, budget, generation_budget=state.executor_generation_budget)
     if not state.early_exit:
-        run_critic(state, llm, budget, evidence=None)
+        run_critic(state, llm, budget, evidence=None, generation_budget=state.critic_generation_budget)
     if not state.early_exit:
         validate_candidate(state, benchmark)
     state.ended_at_utc = utc_now_iso()
     return state
-

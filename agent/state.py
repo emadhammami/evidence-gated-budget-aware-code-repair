@@ -85,6 +85,11 @@ class RepairState(BaseModel):
     token_budget: int
     repetition: int = 1
     is_pilot: bool = False
+    run_status: Literal["completed", "infrastructure_error"] = "completed"
+    max_executor_attempts: int = 1
+    planner_generation_budget: int = 384
+    executor_generation_budget: int = 768
+    critic_generation_budget: int = 384
     started_at_utc: str = Field(default_factory=utc_now_iso)
     ended_at_utc: str | None = None
 
@@ -99,7 +104,8 @@ class RepairState(BaseModel):
 
     retry_used: bool = False
     early_exit: bool = False
-    budget_exceeded: bool = False
+    budget_exhausted: bool = False
+    budget_violation: bool = False
     final_error_category: ErrorCategory = "none"
 
     @property
@@ -127,4 +133,3 @@ class RepairState(BaseModel):
                 **data,
             }
         )
-

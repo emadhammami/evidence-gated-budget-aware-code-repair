@@ -46,7 +46,13 @@ class GeminiClient:
                 skipped_reason=decision.reason,
             )
         start = time.perf_counter()
-        response = self._model.generate_content(prompt)
+        response = self._model.generate_content(
+            prompt,
+            generation_config={
+                "temperature": self.config.temperature,
+                "max_output_tokens": generation_budget,
+            },
+        )
         runtime = time.perf_counter() - start
         text = getattr(response, "text", "") or ""
         usage_meta = getattr(response, "usage_metadata", None)
@@ -108,4 +114,3 @@ class ScriptedLLMClient:
             usage=usage,
             raw_output=text,
         )
-

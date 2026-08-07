@@ -34,6 +34,7 @@ class QuixBugsBenchmark:
         self.programs_dir = quix["python_programs_dir"]
         self.tests_dir = quix["python_tests_dir"]
         self.timeout_seconds = int(quix.get("timeout_seconds", 10))
+        self.tasks = list(quix["tasks"])
 
     def setup(self) -> None:
         if not self.local_path.exists():
@@ -55,12 +56,21 @@ class QuixBugsBenchmark:
         return proc.stdout.strip() or self.commit_sha
 
     def discover_tasks(self) -> list[str]:
-        program_root = self.local_path / self.programs_dir
-        if not program_root.exists():
-            return []
-        return sorted(path.stem for path in program_root.glob("*.py") if not path.name.startswith("__"))
+        if len(self.tasks) != 40:
+            raise RuntimeError(f"Configured QuixBugs task allowlist must contain 40 tasks, got {len(self.tasks)}")
+        missing: list[str] = []
+        for task_id in self.tasks:
+            if not (self.local_path / self.programs_dir / f"{task_id}.py").exists():
+                missing.append(f"{self.programs_dir}/{task_id}.py")
+            if not (self.local_path / self.tests_dir / f"test_{task_id}.py").exists():
+                missing.append(f"{self.tests_dir}/test_{task_id}.py")
+        if missing:
+            details = "\n".join(f"- {path}" for path in missing)
+            raise RuntimeError(f"QuixBugs checkout does not match configured task set:\n{details}")
+        return list(self.tasks)
 
     def load_buggy_code(self, task_id: str) -> str:
+        self._validate_configured_task(task_id)
         return (self.local_path / self.programs_dir / f"{task_id}.py").read_text(encoding="utf-8")
 
     @contextlib.contextmanager
@@ -79,19 +89,16 @@ class QuixBugsBenchmark:
             )
 
     def _test_path(self, task_id: str) -> Path:
+        self._validate_configured_task(task_id)
         test_root = self.local_path / self.tests_dir
-        candidates = [
-            test_root / f"test_{task_id}.py",
-            test_root / f"{task_id}_test.py",
-            test_root / f"{task_id}.py",
-        ]
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate
-        matches = list(test_root.glob(f"*{task_id}*.py"))
-        if matches:
-            return matches[0]
-        raise FileNotFoundError(f"No QuixBugs Python test found for {task_id}")
+        candidate = test_root / f"test_{task_id}.py"
+        if candidate.exists():
+            return candidate
+        raise FileNotFoundError(f"No official QuixBugs Python test found for {task_id}: {candidate}")
+
+    def _validate_configured_task(self, task_id: str) -> None:
+        if task_id not in self.tasks:
+            raise ValueError(f"{task_id!r} is not in the configured QuixBugs task allowlist")
 
     def run_tests(self, env: TaskEnvironment) -> ValidationResult:
         start = time.perf_counter()
@@ -169,8 +176,23 @@ def classify_test_result(return_code: int, stdout: str, stderr: str, timed_out: 
 
 
 def extract_failing_info(output: str, limit: int = 4000) -> str:
-    lines = [line for line in output.splitlines() if "FAILED" in line or "Error" in line or "Assertion" in line]
-    return "\n".join(lines)[-limit:]
+    markers = ["=================================== FAILURES", "==================================== ERRORS"]
+    start = 0
+    for marker in markers:
+        index = output.find(marker)
+        if index != -1:
+            start = index
+            break
+    excerpt = output[start:]
+    summary_index = excerpt.find("=========================== short test summary info")
+    if summary_index != -1:
+        excerpt = excerpt[:summary_index]
+    if not excerpt.strip():
+        excerpt = output
+    excerpt = excerpt.strip()
+    if len(excerpt) <= limit:
+        return excerpt
+    return excerpt[-limit:]
 
 
 def runtime_fingerprint() -> dict[str, str]:
@@ -178,4 +200,3 @@ def runtime_fingerprint() -> dict[str, str]:
         "python_version": platform.python_version(),
         "platform": platform.platform(),
     }
-

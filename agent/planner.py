@@ -18,15 +18,20 @@ def parse_planner_output(text: str) -> PlannerOutput:
     return PlannerOutput(hypothesis=hypothesis or "Unknown defect.", target_function=target)
 
 
-def run_planner(state: RepairState, llm: LLMClient, budget: BudgetManager) -> None:
+def run_planner(
+    state: RepairState,
+    llm: LLMClient,
+    budget: BudgetManager,
+    generation_budget: int = 384,
+) -> None:
     prompt = planner_prompt(state.task_id, state.original_code)
-    call = llm.generate("planner", prompt, budget, generation_budget=384)
+    call = llm.generate("planner", prompt, budget, generation_budget=generation_budget)
     state.llm_calls.append(call)
     if not call.admitted:
         state.early_exit = True
-        state.budget_exceeded = True
+        state.budget_exhausted = True
         state.add_event("planner", admitted=False)
         return
+    state.budget_violation = state.budget_violation or budget.violated
     state.planner = parse_planner_output(call.raw_output)
     state.add_event("planner", admitted=True, target_function=state.planner.target_function)
-

@@ -17,8 +17,12 @@ attempt_policy:
   evidence_gated:
     executor_attempts: 2
 
+generation_budgets:
+  planner: 384
+  executor: 768
+  critic: 384
+
 pilot:
   tasks: ["gcd", "breadth_first_search", "detect_cycle", "levenshtein", "quicksort"]
   method: "evidence_gated"
   budget: 8000
-

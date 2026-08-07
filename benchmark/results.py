@@ -22,13 +22,16 @@ CSV_FIELDS = [
     "model",
     "temperature",
     "is_pilot",
-    "repaired",
+    "run_status",
+    "candidate_correct",
+    "workflow_success",
     "tests_passed",
     "tests_failed",
     "tests_total",
     "critic_invoked",
     "critic_accepted",
     "false_accept",
+    "false_reject",
     "input_tokens",
     "output_tokens",
     "total_tokens",
@@ -41,7 +44,8 @@ CSV_FIELDS = [
     "validation_failures",
     "retry_used",
     "early_exit",
-    "budget_exceeded",
+    "budget_exhausted",
+    "budget_violation",
     "budget_limit",
     "budget_used",
     "budget_remaining",
@@ -61,7 +65,7 @@ def completed_keys(csv_path: str | Path = "results/runs.csv") -> set[tuple[str, 
     keys: set[tuple[str, str, int, int]] = set()
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
-            if str(row.get("early_exit", "")).lower() == "true":
+            if row.get("run_status", "completed") != "completed":
                 continue
             keys.add(
                 (
@@ -83,10 +87,17 @@ def state_to_row(
 ) -> dict[str, Any]:
     usage = state.tokens_used
     latest = state.latest_validation
-    repaired = bool(latest and latest.success)
+    candidate_correct = bool(latest and latest.success)
     critic_invoked = state.critic is not None
     critic_accepted = state.critic.accepted if state.critic else None
-    false_accept = None if state.method == "single_shot" else bool(critic_accepted and not repaired)
+    if state.method == "single_shot":
+        workflow_success = candidate_correct
+        false_accept = None
+        false_reject = None
+    else:
+        workflow_success = bool(candidate_correct and critic_accepted)
+        false_accept = bool(critic_accepted and not candidate_correct)
+        false_reject = bool(critic_accepted is False and candidate_correct)
     runtime = 0.0
     if state.ended_at_utc and state.started_at_utc:
         runtime = max(0.0, sum(v.runtime_seconds for v in state.validations) + sum(c.runtime_seconds for c in state.llm_calls))
@@ -102,13 +113,16 @@ def state_to_row(
         "model": model,
         "temperature": temperature,
         "is_pilot": state.is_pilot,
-        "repaired": repaired,
+        "run_status": state.run_status,
+        "candidate_correct": candidate_correct,
+        "workflow_success": workflow_success,
         "tests_passed": latest.tests_passed if latest else 0,
         "tests_failed": latest.tests_failed if latest else 0,
         "tests_total": latest.tests_total if latest else 0,
         "critic_invoked": critic_invoked,
         "critic_accepted": critic_accepted,
         "false_accept": false_accept,
+        "false_reject": false_reject,
         "input_tokens": usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "total_tokens": usage.total_tokens,
@@ -121,7 +135,8 @@ def state_to_row(
         "validation_failures": len([v for v in state.validations if not v.success]),
         "retry_used": state.retry_used,
         "early_exit": state.early_exit,
-        "budget_exceeded": state.budget_exceeded,
+        "budget_exhausted": state.budget_exhausted,
+        "budget_violation": state.budget_violation,
         "budget_limit": state.token_budget,
         "budget_used": usage.total_tokens,
         "budget_remaining": max(0, state.token_budget - usage.total_tokens),
@@ -177,4 +192,3 @@ def persist_result(
     )
     append_csv_row(root / "runs.csv", row)
     return raw_path
-
