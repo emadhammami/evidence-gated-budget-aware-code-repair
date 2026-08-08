@@ -203,15 +203,6 @@ ruff check .
 Normal tests use deterministic mocked LLM responses and do not require a Gemini API key.
 The GitHub Actions workflow runs `pytest` and `ruff` on Python 3.11 and 3.12.
 
-## Scientific Integrity
-
-This repository does not include real experimental results. Do not fabricate results, do
-not cherry-pick successful QuixBugs tasks, and do not silently exclude failed runs. Any
-incompatible task must be documented with an explicit exclusion reason.
-
-Prompt or protocol changes after observing failures should be treated as a new experiment
-version. V3 may receive failed-test feedback only after the first candidate has been
-generated and executed.
 
 ## Limitations
 
