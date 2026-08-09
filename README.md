@@ -1,15 +1,25 @@
 # Evidence-Gated Budget-Aware Code Repair
 
-This repository implements a controlled experimental benchmark for studying:
+This repository is the reproducibility artifact for the paper:
 
-**Evidence-Guided Budget-Aware Orchestration for LLM-Based Code Repair**
+**Evidence-Guided Budget Allocation for Multi-Stage Large Language Model Orchestration**
 
-The central question is whether executable test evidence can allocate a fixed LLM token
-budget more efficiently in an agentic code-repair workflow.
+The paper studies evidence-guided budget allocation as a general
+multi-stage LLM orchestration problem. This repository contains the
+controlled code-repair instantiation used for the empirical evaluation.
+
+In this instantiation, executable QuixBugs test outcomes act as
+intermediate environment evidence for deciding whether the remaining
+token budget should be allocated to downstream verification, recovery,
+or termination.
+
+The Digital Product Passport (DPP) case study discussed in the paper is
+an illustrative application of the orchestration principle and is not
+implemented or empirically evaluated in this repository.
 
 This repository is an experimental extension of
-`emadhammami/langgraph-budget-aware-code-agent`. The original prototype is not modified by
-this codebase.
+`emadhammami/langgraph-budget-aware-code-agent`. The original prototype
+is not modified by this codebase.
 
 ## Variants
 
@@ -22,8 +32,8 @@ The benchmark implements exactly four methods under the same model configuration
 | `pevc` | Planner -> Executor -> validation -> Critic | Critic receives objective execution evidence for every patch. |
 | `evidence_gated` | Planner -> Executor -> validation -> Evidence Gate | Failed tests skip the Critic and may trigger one evidence-guided retry. Passing patches may go to the Critic. |
 
-V0, V1, and V2 each allow one Executor attempt. V3 allows an initial Executor attempt plus
-at most one evidence-guided retry.
+Single-shot, PEC, and PEVC each allow one Executor attempt. Evidence-Gated allows an
+initial Executor attempt plus at most one evidence-guided retry.
 
 ## Model And Budget
 
@@ -203,6 +213,38 @@ ruff check .
 Normal tests use deterministic mocked LLM responses and do not require a Gemini API key.
 The GitHub Actions workflow runs `pytest` and `ruff` on Python 3.11 and 3.12.
 
+
+## Publication Artifact
+
+The complete experimental data used for the reported results are available
+in [`final_core_results.zip`](final_core_results.zip).
+
+The artifact contains exactly 240 completed non-pilot task-condition runs:
+
+- Single-shot @ 4000 tokens: 40
+- PEC @ 4000 tokens: 40
+- PEVC @ 4000 tokens: 40
+- Evidence-Gated @ 4000 tokens: 40
+- Evidence-Gated @ 2000 tokens: 40
+- Evidence-Gated @ 1000 tokens: 40
+
+The archive includes:
+
+- `core_runs.csv`, containing the 240 run-level records;
+- `raw/`, containing one raw JSON telemetry file per reported run;
+- `experiment_git_commit.txt`, identifying the implementation revision;
+- `python_version.txt`;
+- `requirements-final.txt`;
+- an artifact-specific README.
+
+All 240 reported runs use experiment commit
+`93ce1a5901bf900033c8cc7c547b8e8926bb7103`, use provider-reported token
+counts, and contain no budget violations. The five-task infrastructure
+pilot and infrastructure-error attempts are excluded from the publication
+artifact.
+
+The SHA-256 checksum of the archive is provided in
+[`final_core_results.sha256.txt`](final_core_results.sha256.txt).
 
 ## Limitations
 
