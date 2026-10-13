@@ -1,5 +1,7 @@
 # Evidence-Gated Budget-Aware Code Repair
 
+**Manuscript status (October 2026):** Submitted to AIPMV 2026; not yet published.
+
 This repository is the reproducibility artifact for the paper:
 
 **Evidence-Guided Budget Allocation for Multi-Stage Large Language Model Orchestration**
